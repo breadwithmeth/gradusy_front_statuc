@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  editor
+}
+
+enum LinkKind {
+  app
+  store
+  promo
+  bonus
+  messenger
+  social
+  phone
+  website
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         UserRole  @default(admin)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model Link {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  href        String
+  slug        String   @unique
+  kind        LinkKind
+  icon        String
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  clickCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  clicks      Click[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Click {
+  id        String   @id @default(cuid())
+  linkId    String
+  link      Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+  referer   String?
+  source    String?
+  country   String?
+  city      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([linkId, createdAt])
+}
+
+model Settings {
+  id              String   @id @default("site_settings")
+  brandName       String   @default("Градусы24")
+  headline        String   @default("Всегда в вашем кругу")
+  description     String   @default("Круглосуточный маркет-бар. Доставка напитков, снеков и товаров для отдыха.")
+  primaryColor    String   @default("#F97300")
+  accentColor     String   @default("#7A1B12")
+  backgroundColor String   @default("#FFFFFF")
+  appStoreUrl     String?
+  googlePlayUrl   String?
+  phone           String   @default("+7 700 000 24 24")
+  whatsapp        String   @default("https://wa.me/77000002424")
+  telegram        String   @default("https://t.me/gradusy24")
+  instagram       String   @default("https://instagram.com/gradusy24")
+  website         String   @default("https://gradusy24.kz")
+  qrTargetUrl     String   @default("https://gradusy24.kz")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

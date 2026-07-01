@@ -1,0 +1,29 @@
+{
+  "name": "gradusy24-taplink-cms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TapLink CMS for Gradusy24 market-bars",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n frontend,backend -c orange,blue \"npm run dev --workspace @gradusy24/frontend\" \"npm run dev --workspace @gradusy24/backend\"",
+    "dev:frontend": "npm run dev --workspace @gradusy24/frontend",
+    "dev:backend": "npm run dev --workspace @gradusy24/backend",
+    "build": "npm run build --workspace @gradusy24/shared && npm run build --workspace @gradusy24/frontend && npm run build --workspace @gradusy24/backend",
+    "typecheck": "npm run build --workspace @gradusy24/shared && npm run typecheck --workspace @gradusy24/frontend && npm run typecheck --workspace @gradusy24/backend",
+    "lint": "npm run lint --workspace @gradusy24/frontend",
+    "db:generate": "npm run db:generate --workspace @gradusy24/backend",
+    "db:migrate": "npm run db:migrate --workspace @gradusy24/backend",
+    "db:seed": "npm run db:seed --workspace @gradusy24/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  }
+}
