@@ -1,11 +1,14 @@
 # Coolify / Nixpacks deploy for go.gradusy24.kz.
 # Required secrets must be set in Coolify, not here:
 # DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, COOKIE_SECRET.
+# Run migrations manually from Coolify terminal when DB connections are available:
+# npm run db:deploy --workspace @gradusy24/backend
 
 [variables]
 HOST = "0.0.0.0"
 PORT = "3000"
 FRONTEND_ORIGIN = "https://go.gradusy24.kz"
+PRISMA_CONNECTION_LIMIT = "3"
 VITE_API_URL = "/api"
 VITE_FRONTEND_URL = "https://go.gradusy24.kz"
 
@@ -21,4 +24,4 @@ cmds = [
 ]
 
 [start]
-cmd = "NODE_ENV=production npm run db:deploy --workspace @gradusy24/backend && NODE_ENV=production npm run start --workspace @gradusy24/backend"
+cmd = "NODE_ENV=production npm run start --workspace @gradusy24/backend"

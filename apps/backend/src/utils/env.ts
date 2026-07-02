@@ -11,7 +11,8 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   COOKIE_SECRET: z.string().min(32),
   ACCESS_TOKEN_TTL: z.string().default("15m"),
-  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30)
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  PRISMA_CONNECTION_LIMIT: z.coerce.number().int().positive().default(3)
 });
 
 export const env = envSchema.parse(process.env);
