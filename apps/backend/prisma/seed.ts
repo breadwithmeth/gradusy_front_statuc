@@ -1,3 +1,4 @@
+import "dotenv/config";
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 
@@ -10,6 +11,7 @@ const links = [
     href: "https://gradusy24.kz/app",
     slug: "app",
     kind: "app",
+    target: "frontend",
     icon: "Smartphone",
     sortOrder: 10
   },
@@ -19,6 +21,7 @@ const links = [
     href: "https://gradusy24.kz/stores",
     slug: "stores",
     kind: "store",
+    target: "frontend",
     icon: "MapPin",
     sortOrder: 20
   },
@@ -28,6 +31,7 @@ const links = [
     href: "https://gradusy24.kz/promos",
     slug: "promos",
     kind: "promo",
+    target: "frontend",
     icon: "BadgePercent",
     sortOrder: 30
   },
@@ -37,6 +41,7 @@ const links = [
     href: "https://gradusy24.kz/bonus",
     slug: "bonus",
     kind: "bonus",
+    target: "frontend",
     icon: "Gift",
     sortOrder: 40
   },
@@ -46,6 +51,7 @@ const links = [
     href: "https://wa.me/77000002424",
     slug: "whatsapp",
     kind: "messenger",
+    target: "direct",
     icon: "MessageCircle",
     sortOrder: 50
   },
@@ -55,6 +61,7 @@ const links = [
     href: "https://t.me/gradusy24",
     slug: "telegram",
     kind: "messenger",
+    target: "direct",
     icon: "Send",
     sortOrder: 60
   },
@@ -64,6 +71,7 @@ const links = [
     href: "https://instagram.com/gradusy24",
     slug: "instagram",
     kind: "social",
+    target: "direct",
     icon: "Instagram",
     sortOrder: 70
   },
@@ -73,6 +81,7 @@ const links = [
     href: "tel:+77000002424",
     slug: "call",
     kind: "phone",
+    target: "direct",
     icon: "PhoneCall",
     sortOrder: 80
   },
@@ -82,8 +91,36 @@ const links = [
     href: "https://gradusy24.kz",
     slug: "website",
     kind: "website",
+    target: "direct",
     icon: "Globe2",
     sortOrder: 90
+  }
+] as const;
+
+const entryLinks = [
+  {
+    title: "TapLink",
+    description: "Основной вход на страницу ссылок",
+    slug: "taplink",
+    sortOrder: 10
+  },
+  {
+    title: "QR вход",
+    description: "Переходы из QR-кодов",
+    slug: "qr",
+    sortOrder: 20
+  },
+  {
+    title: "Instagram",
+    description: "Переходы из профиля Instagram",
+    slug: "instagram",
+    sortOrder: 30
+  },
+  {
+    title: "Stories",
+    description: "Переходы из stories и промо",
+    slug: "stories",
+    sortOrder: 40
   }
 ] as const;
 
@@ -114,6 +151,14 @@ async function main() {
       where: { slug: link.slug },
       update: link,
       create: link
+    });
+  }
+
+  for (const entryLink of entryLinks) {
+    await prisma.entryLink.upsert({
+      where: { slug: entryLink.slug },
+      update: entryLink,
+      create: entryLink
     });
   }
 }

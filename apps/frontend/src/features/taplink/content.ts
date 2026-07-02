@@ -1,4 +1,4 @@
-import type { ApiLink, DashboardResponse } from "@/types/api";
+import type { ApiEntryLink, ApiLink, DashboardResponse } from "@/types/api";
 import type { SiteSettings } from "@gradusy24/shared";
 
 export const defaultSettings: SiteSettings = {
@@ -26,6 +26,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://gradusy24.kz/app",
     slug: "app",
     kind: "app",
+    target: "frontend",
     icon: "Smartphone",
     isActive: true,
     sortOrder: 10,
@@ -40,6 +41,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://gradusy24.kz/stores",
     slug: "stores",
     kind: "store",
+    target: "frontend",
     icon: "MapPin",
     isActive: true,
     sortOrder: 20,
@@ -54,6 +56,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://gradusy24.kz/promos",
     slug: "promos",
     kind: "promo",
+    target: "frontend",
     icon: "BadgePercent",
     isActive: true,
     sortOrder: 30,
@@ -68,6 +71,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://gradusy24.kz/bonus",
     slug: "bonus",
     kind: "bonus",
+    target: "frontend",
     icon: "Gift",
     isActive: true,
     sortOrder: 40,
@@ -82,6 +86,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://wa.me/77000002424",
     slug: "whatsapp",
     kind: "messenger",
+    target: "direct",
     icon: "MessageCircle",
     isActive: true,
     sortOrder: 50,
@@ -96,6 +101,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://t.me/gradusy24",
     slug: "telegram",
     kind: "messenger",
+    target: "direct",
     icon: "Send",
     isActive: true,
     sortOrder: 60,
@@ -110,6 +116,7 @@ export const defaultLinks: ApiLink[] = [
     href: "https://instagram.com/gradusy24",
     slug: "instagram",
     kind: "social",
+    target: "direct",
     icon: "Instagram",
     isActive: true,
     sortOrder: 70,
@@ -124,6 +131,7 @@ export const defaultLinks: ApiLink[] = [
     href: "tel:+77000002424",
     slug: "call",
     kind: "phone",
+    target: "direct",
     icon: "PhoneCall",
     isActive: true,
     sortOrder: 80,
@@ -138,10 +146,54 @@ export const defaultLinks: ApiLink[] = [
     href: "https://gradusy24.kz",
     slug: "website",
     kind: "website",
+    target: "direct",
     icon: "Globe2",
     isActive: true,
     sortOrder: 90,
     clickCount: 6230,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+export const defaultEntryLinks: ApiEntryLink[] = [
+  {
+    id: "taplink",
+    title: "TapLink",
+    description: "Основной вход на страницу ссылок",
+    slug: "taplink",
+    isActive: true,
+    sortOrder: 10,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "qr",
+    title: "QR вход",
+    description: "Переходы из QR-кодов",
+    slug: "qr",
+    isActive: true,
+    sortOrder: 20,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "instagram-source",
+    title: "Instagram",
+    description: "Переходы из профиля Instagram",
+    slug: "instagram",
+    isActive: true,
+    sortOrder: 30,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "stories",
+    title: "Stories",
+    description: "Переходы из stories и промо",
+    slug: "stories",
+    isActive: true,
+    sortOrder: 40,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
@@ -183,6 +235,44 @@ export const fallbackDashboard: DashboardResponse = {
     userAgent: "Mobile Safari",
     ipAddress: "127.0.0.1"
   })),
+  sourceStats: [
+    {
+      source: "qr",
+      visits: 520,
+      clicks: 430,
+      actions: defaultLinks.slice(0, 3).map((link, index) => ({
+        id: link.id,
+        title: link.title,
+        slug: link.slug,
+        kind: link.kind,
+        clicks: 190 - index * 44
+      }))
+    },
+    {
+      source: "instagram",
+      visits: 340,
+      clicks: 280,
+      actions: defaultLinks.slice(4, 7).map((link, index) => ({
+        id: link.id,
+        title: link.title,
+        slug: link.slug,
+        kind: link.kind,
+        clicks: 124 - index * 31
+      }))
+    },
+    {
+      source: "taplink",
+      visits: 260,
+      clicks: 210,
+      actions: defaultLinks.slice(1, 4).map((link, index) => ({
+        id: link.id,
+        title: link.title,
+        slug: link.slug,
+        kind: link.kind,
+        clicks: 98 - index * 19
+      }))
+    }
+  ],
   trend: Array.from({ length: 14 }).map((_, index) => ({
     date: new Date(Date.now() - (13 - index) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     clicks: 620 + index * 52 + (index % 3) * 140

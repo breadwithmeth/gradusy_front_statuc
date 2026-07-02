@@ -23,6 +23,11 @@ enum LinkKind {
   website
 }
 
+enum LinkTarget {
+  frontend
+  direct
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -56,6 +61,7 @@ model Link {
   href        String
   slug        String   @unique
   kind        LinkKind
+  target      LinkTarget @default(frontend)
   icon        String
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
@@ -81,6 +87,19 @@ model Click {
 
   @@index([createdAt])
   @@index([linkId, createdAt])
+}
+
+model EntryLink {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  slug        String   @unique
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 model Settings {

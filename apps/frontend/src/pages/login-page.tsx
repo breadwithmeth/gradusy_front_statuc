@@ -46,7 +46,7 @@ export function LoginPage() {
           </div>
           <CardHeader>
             <CardTitle>Вход в CMS</CardTitle>
-            <CardDescription>Управление ссылками, QR-кодами, оформлением и статистикой.</CardDescription>
+            <CardDescription>Управление действиями, QR-кодами, оформлением и статистикой.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>

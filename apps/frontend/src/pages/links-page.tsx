@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Edit3, Plus, Save, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { linkInputSchema, linkKindSchema, type LinkInput } from "@gradusy24/shared";
+import { linkInputSchema, linkTargetSchema, type LinkInput } from "@gradusy24/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,15 +16,15 @@ import { iconMap } from "@/features/taplink/icon-map";
 import { LinkIcon } from "@/features/taplink/icons";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatNumber } from "@/lib/utils";
-import { api, trackingUrl } from "@/services/api";
+import { api } from "@/services/api";
 import type { ApiLink } from "@/types/api";
 
 const defaultFormValues: LinkInput = {
   title: "",
   description: "",
   href: "",
-  slug: "",
   kind: "website",
+  target: "frontend",
   icon: "Globe2",
   isActive: true,
   sortOrder: 100
@@ -59,8 +59,8 @@ export function LinksPage() {
       title: editingLink.title,
       description: editingLink.description,
       href: editingLink.href,
-      slug: editingLink.slug,
       kind: editingLink.kind,
+      target: editingLink.target,
       icon: editingLink.icon,
       isActive: editingLink.isActive,
       sortOrder: editingLink.sortOrder
@@ -98,22 +98,26 @@ export function LinksPage() {
     <div className="grid gap-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <Badge>Tracking links</Badge>
-          <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">Ссылки</h1>
+          <Badge>Tracked actions</Badge>
+          <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">Действия</h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            Карточки публичной страницы, порядок отображения и маршруты для аналитики.
+            Действия публичной страницы, порядок отображения и маршруты для аналитики.
           </p>
         </div>
-        <Button onClick={() => setEditingId(null)}>
+        <Button
+          onClick={() => {
+            setEditingId(null);
+          }}
+        >
           <Plus className="size-4" />
-          Новая ссылка
+          Новое действие
         </Button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Активные карточки</CardTitle>
+            <CardTitle>Активные действия</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             {links.map((link) => (
@@ -132,12 +136,12 @@ export function LinksPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate font-bold">{link.title}</p>
                       {!link.isActive ? <Badge className="bg-muted">скрыта</Badge> : null}
+                      <Badge className={link.target === "direct" ? "bg-brand-ink text-white" : "bg-brand-orange text-white"}>
+                        {link.target === "direct" ? "direct" : "frontend"}
+                      </Badge>
                     </div>
                     <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                      /{link.slug} · {link.description}
-                    </p>
-                    <p className="mt-2 text-xs font-semibold text-muted-foreground">
-                      {trackingUrl(link.slug)}
+                      {link.description}
                     </p>
                   </div>
                 </div>
@@ -165,8 +169,10 @@ export function LinksPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-4">
             <div>
-              <CardTitle>{editingLink ? "Редактировать" : "Новая ссылка"}</CardTitle>
-              <p className="mt-2 text-sm text-muted-foreground">Slug становится частью отслеживаемого URL.</p>
+              <CardTitle>{editingLink ? "Редактировать действие" : "Новое действие"}</CardTitle>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Эти действия показываются на фронте. Публичные /go/slug создаются на странице QR-кодов.
+              </p>
             </div>
             {editingLink ? (
               <Button variant="ghost" size="icon" onClick={() => setEditingId(null)} aria-label="Закрыть">
@@ -185,48 +191,45 @@ export function LinksPage() {
                 <Textarea id="description" {...form.register("description")} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="href">Целевая ссылка</Label>
-                <Input id="href" placeholder="https://..." {...form.register("href")} />
+                <Label htmlFor="href">Целевая ссылка действия</Label>
+                <Input id="href" placeholder="https://... или /promo" {...form.register("href")} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input id="slug" placeholder="app-store" {...form.register("slug")} />
-                </div>
                 <div className="grid gap-2">
                   <Label htmlFor="sortOrder">Порядок</Label>
                   <Input id="sortOrder" type="number" {...form.register("sortOrder", { valueAsNumber: true })} />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="kind">Тип</Label>
-                  <select
-                    id="kind"
-                    className="min-h-11 rounded-2xl border border-input bg-white px-4 text-sm"
-                    {...form.register("kind")}
-                  >
-                    {linkKindSchema.options.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {kind}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="icon">Иконка</Label>
-                  <select
-                    id="icon"
-                    className="min-h-11 rounded-2xl border border-input bg-white px-4 text-sm"
-                    {...form.register("icon")}
-                  >
-                    {Object.keys(iconMap).map((icon) => (
-                      <option key={icon} value={icon}>
-                        {icon}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="target">Куда ведет</Label>
+                <select
+                  id="target"
+                  className="min-h-11 rounded-2xl border border-input bg-white px-4 text-sm"
+                  {...form.register("target")}
+                >
+                  {linkTargetSchema.options.map((target) => (
+                    <option key={target} value={target}>
+                      {target === "frontend" ? "Frontend route" : "Direct URL"}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Frontend route строится от FRONTEND_ORIGIN для относительных href. Direct URL ведет ровно в href.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="icon">Иконка</Label>
+                <select
+                  id="icon"
+                  className="min-h-11 rounded-2xl border border-input bg-white px-4 text-sm"
+                  {...form.register("icon")}
+                >
+                  {Object.keys(iconMap).map((icon) => (
+                    <option key={icon} value={icon}>
+                      {icon}
+                    </option>
+                  ))}
+                </select>
               </div>
               <Switch label="Показывать на странице" {...form.register("isActive")} />
 
@@ -237,7 +240,7 @@ export function LinksPage() {
               ) : null}
               {saveMutation.isError ? (
                 <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-destructive">
-                  Не удалось сохранить ссылку.
+                  Не удалось сохранить действие.
                 </p>
               ) : null}
 

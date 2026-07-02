@@ -3,16 +3,80 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
-import Fastify from "fastify";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { clicksRoutes } from "./modules/clicks/clicks.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
+import { entryLinksRoutes } from "./modules/entry-links/entry-links.routes.js";
 import { linksRoutes } from "./modules/links/links.routes.js";
 import { settingsRoutes } from "./modules/settings/settings.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { allowedOrigins, env, isProduction } from "./utils/env.js";
+
+const frontendDistDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../frontend/dist");
+const frontendIndexFile = path.join(frontendDistDir, "index.html");
+
+const mimeTypes: Record<string, string> = {
+  ".css": "text/css; charset=utf-8",
+  ".gif": "image/gif",
+  ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".map": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+  ".webp": "image/webp",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2"
+};
+
+async function isFile(filePath: string) {
+  try {
+    return (await stat(filePath)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function registerFrontendRoutes(app: FastifyInstance) {
+  if (!(await isFile(frontendIndexFile))) {
+    app.log.warn({ frontendDistDir }, "Frontend dist directory is not available; static routes are disabled");
+    return;
+  }
+
+  app.get("/*", async (request, reply) => {
+    const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
+
+    if (pathname.startsWith("/api/")) {
+      reply.code(404).send({ message: "Not found" });
+      return;
+    }
+
+    const requestedFile = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+    const resolvedFile = path.resolve(frontendDistDir, requestedFile);
+    const isInsideFrontendDist =
+      resolvedFile === frontendDistDir || resolvedFile.startsWith(`${frontendDistDir}${path.sep}`);
+    const filePath = isInsideFrontendDist && (await isFile(resolvedFile)) ? resolvedFile : frontendIndexFile;
+    const contentType = mimeTypes[path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
+
+    if (filePath === frontendIndexFile && path.extname(pathname)) {
+      reply.code(404).send({ message: "Not found" });
+      return;
+    }
+
+    reply.type(contentType).send(createReadStream(filePath));
+  });
+}
 
 export async function buildApp() {
   const app = Fastify({
@@ -29,6 +93,7 @@ export async function buildApp() {
 
   await app.register(cors, {
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     origin(origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -66,9 +131,11 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: "/api/auth" });
   await app.register(settingsRoutes, { prefix: "/api" });
   await app.register(linksRoutes, { prefix: "/api" });
+  await app.register(entryLinksRoutes, { prefix: "/api" });
   await app.register(clicksRoutes, { prefix: "/api" });
   await app.register(usersRoutes, { prefix: "/api/users" });
   await app.register(dashboardRoutes, { prefix: "/api/dashboard" });
+  await registerFrontendRoutes(app);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {

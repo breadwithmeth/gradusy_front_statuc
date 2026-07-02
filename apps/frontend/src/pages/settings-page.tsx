@@ -55,7 +55,7 @@ export function SettingsPage() {
         <Badge>Brand control</Badge>
         <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">Оформление</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">
-          Тексты публичной страницы, контакты, цвета и основные destination-ссылки.
+          Тексты публичной страницы, контакты, цвета и основные destination.
         </p>
       </div>
 

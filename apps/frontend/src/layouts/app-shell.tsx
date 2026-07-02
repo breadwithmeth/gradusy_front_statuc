@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/app", label: "Дашборд", icon: BarChart3, end: true },
-  { to: "/app/links", label: "Ссылки", icon: Link2 },
+  { to: "/app/links", label: "Действия", icon: Link2 },
   { to: "/app/qr", label: "QR", icon: QrCode },
   { to: "/app/settings", label: "Оформление", icon: Settings }
 ];

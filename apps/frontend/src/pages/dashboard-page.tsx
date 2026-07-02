@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, ArrowUpRight, Link2, MousePointerClick, QrCode } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SourceAnalyticsModal } from "@/features/analytics/source-analytics-modal";
 import { fallbackDashboard } from "@/features/taplink/content";
 import { LinkIcon } from "@/features/taplink/icons";
 import { formatDateTime, formatNumber } from "@/lib/utils";
@@ -16,6 +18,7 @@ const summaryCards = [
 ] as const;
 
 export function DashboardPage() {
+  const [selectedSourceSlug, setSelectedSourceSlug] = useState<string | null>(null);
   const dashboardQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: api.dashboard,
@@ -24,6 +27,8 @@ export function DashboardPage() {
 
   const dashboard = dashboardQuery.data ?? fallbackDashboard;
   const maxTrend = Math.max(...dashboard.trend.map((item) => item.clicks), 1);
+  const sourceStats = dashboard.sourceStats ?? [];
+  const maxSourceVisits = Math.max(...sourceStats.map((item) => item.visits), 1);
 
   return (
     <div className="grid gap-6">
@@ -92,7 +97,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Топ ссылок</CardTitle>
+          <CardTitle>Топ действий</CardTitle>
             <p className="text-sm text-muted-foreground">По накопленным кликам.</p>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -103,7 +108,7 @@ export function DashboardPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{link.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">/{link.slug}</p>
+                  <p className="truncate text-xs text-muted-foreground">key: {link.slug}</p>
                 </div>
                 <Badge className="bg-white">{formatNumber(link.clickCount)}</Badge>
               </div>
@@ -111,6 +116,66 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle>Входы /go</CardTitle>
+            <p className="text-sm text-muted-foreground">Открытия slug и клики по действиям после входа.</p>
+          </div>
+          <Badge className="bg-white">{formatNumber(sourceStats.length)} источников</Badge>
+        </CardHeader>
+        <CardContent className="grid gap-3 lg:grid-cols-2">
+          {sourceStats.length ? (
+            sourceStats.map((source) => (
+              <button
+                key={source.source}
+                type="button"
+                className="rounded-3xl border border-border bg-muted/60 p-4 text-left transition hover:border-brand-orange hover:bg-secondary"
+                onClick={() => setSelectedSourceSlug(source.source)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">/go/{source.source}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatNumber(source.visits)} входов · {formatNumber(source.clicks)} кликов
+                    </p>
+                  </div>
+                  <Badge className="bg-white">{formatNumber(source.visits)}</Badge>
+                </div>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-brand-orange"
+                    style={{ width: `${Math.max((source.visits / maxSourceVisits) * 100, 8)}%` }}
+                  />
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {source.actions.length ? (
+                    source.actions.map((action) => (
+                      <div key={action.id} className="flex items-center gap-2">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-orange">
+                          <LinkIcon name={action.kind === "website" ? "Globe2" : undefined} className="size-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{action.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">{action.slug}</p>
+                        </div>
+                        <span className="text-sm font-bold">{formatNumber(action.clicks)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Пока нет кликов по действиям после этого входа.</p>
+                  )}
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="rounded-3xl border border-border p-4 text-sm text-muted-foreground">
+              Данные появятся после перехода на страницу через /go/slug и клика по одному из действий.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -123,7 +188,7 @@ export function DashboardPage() {
               <div className="min-w-0">
                 <p className="truncate font-semibold">{click.link.title}</p>
                 <p className="mt-1 truncate text-sm text-muted-foreground">
-                  /{click.link.slug} · {click.source ?? "direct"} · {click.referer ?? "no referer"}
+                  {click.source ?? "taplink"} -&gt; {click.link.slug} · {click.referer ?? "no referer"}
                 </p>
               </div>
               <span className="text-sm font-semibold text-muted-foreground">
@@ -133,6 +198,8 @@ export function DashboardPage() {
           ))}
         </CardContent>
       </Card>
+
+      <SourceAnalyticsModal sourceSlug={selectedSourceSlug} onClose={() => setSelectedSourceSlug(null)} />
     </div>
   );
 }

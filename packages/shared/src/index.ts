@@ -11,6 +11,8 @@ export const linkKindSchema = z.enum([
   "website"
 ]);
 
+export const linkTargetSchema = z.enum(["frontend", "direct"]);
+
 export const linkInputSchema = z.object({
   title: z.string().min(2).max(80),
   description: z.string().max(180).optional().default(""),
@@ -19,14 +21,31 @@ export const linkInputSchema = z.object({
     .string()
     .min(2)
     .max(80)
-    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and hyphens"),
-  kind: linkKindSchema,
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and hyphens")
+    .optional(),
+  kind: linkKindSchema.default("website"),
+  target: linkTargetSchema.default("frontend"),
   icon: z.string().min(2).max(48),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(1000).default(0)
 });
 
 export const linkUpdateSchema = linkInputSchema.partial();
+
+export const entryLinkInputSchema = z.object({
+  title: z.string().min(2).max(80),
+  description: z.string().max(180).optional().default(""),
+  actionIds: z.array(z.string().min(1)).optional(),
+  slug: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and hyphens"),
+  isActive: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(1000).default(0)
+});
+
+export const entryLinkUpdateSchema = entryLinkInputSchema.partial();
 
 export const settingsSchema = z.object({
   brandName: z.string().min(2).max(80).default("Градусы24"),
@@ -65,7 +84,10 @@ export const clickQuerySchema = z.object({
 });
 
 export type LinkKind = z.infer<typeof linkKindSchema>;
+export type LinkTarget = z.infer<typeof linkTargetSchema>;
 export type LinkInput = z.infer<typeof linkInputSchema>;
 export type LinkUpdate = z.infer<typeof linkUpdateSchema>;
+export type EntryLinkInput = z.infer<typeof entryLinkInputSchema>;
+export type EntryLinkUpdate = z.infer<typeof entryLinkUpdateSchema>;
 export type SiteSettings = z.infer<typeof settingsSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

@@ -17,6 +17,10 @@ export const router = createBrowserRouter([
     element: <LoginPage />
   },
   {
+    path: "/go/:sourceSlug",
+    element: <PublicTapLinkPage />
+  },
+  {
     path: "/app",
     element: <AppShell />,
     children: [

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { brand } from "@/lib/brand";
-import { api, trackingUrl } from "@/services/api";
+import { api, linkDestination } from "@/services/api";
 import { defaultLinks } from "@/features/taplink/content";
 import { LinkIcon } from "@/features/taplink/icons";
 import type { ApiLink } from "@/types/api";
@@ -12,6 +13,7 @@ type IntroStage = "intro" | "links";
 
 const LINKS_REVEAL_DELAY_MS = 1600;
 const INTRO_COMPLETE_DELAY_MS = 4950;
+const trackedEntryKeys = new Set<string>();
 
 type SealLayer = {
   src: string;
@@ -91,24 +93,49 @@ const sealLayers: SealLayer[] = [
 
 type LinksPanelProps = {
   primaryLinks: ApiLink[];
+  sourceSlug: string;
   reveal?: boolean;
 };
 
-function LinksPanel({ primaryLinks, reveal }: LinksPanelProps) {
+function LinksPanel({ primaryLinks, sourceSlug, reveal }: LinksPanelProps) {
   const shouldAnimateRows = typeof reveal === "boolean";
+  const shouldReduceMotion = useReducedMotion();
+
+  function handleLinkClick(event: MouseEvent<HTMLAnchorElement>, link: ApiLink) {
+    event.preventDefault();
+
+    api
+      .trackClick(link.slug, sourceSlug)
+      .then(({ href }) => {
+        window.location.assign(href);
+      })
+      .catch(() => {
+        window.location.assign(linkDestination(link));
+      });
+  }
 
   return (
     <section className="relative min-h-[calc(100svh_-_32px)] overflow-hidden bg-white p-3">
+      <motion.img
+        src="/assets/3.png"
+        alt=""
+        className="pointer-events-none absolute -right-20 bottom-10 z-0 w-44 max-w-none object-contain opacity-10 blur-[3px] will-change-transform"
+        initial={{ rotate: 0, scale: 2 }}
+        animate={{ rotate: shouldReduceMotion ? 0 : 360, scale: 2 }}
+        transition={shouldReduceMotion ? undefined : { duration: 48, repeat: Infinity, ease: "linear" }}
+      />
       <img
         src={brand.logo}
         alt=""
         className="pointer-events-none absolute left-1/2 top-4 z-0 w-[min(440px,calc(100vw_-_40px))] -translate-x-1/2 opacity-[0.025]"
       />
+      <div className="liquid-glass-wash pointer-events-none absolute inset-x-0 top-0 z-[1] h-40" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-28 bg-[linear-gradient(0deg,rgba(255,255,255,0.86),rgba(255,255,255,0))]" />
 
       <div className="relative z-10 grid gap-3">
         <div className="px-1 pt-1">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#F97300]">
-            Ссылки
+            Действия
           </p>
         </div>
 
@@ -116,7 +143,8 @@ function LinksPanel({ primaryLinks, reveal }: LinksPanelProps) {
           {primaryLinks.map((link, index) => (
             <motion.a
               key={link.id}
-              href={trackingUrl(link.slug)}
+              href={linkDestination(link)}
+              onClick={(event) => handleLinkClick(event, link)}
               initial={shouldAnimateRows ? false : undefined}
               animate={
                 shouldAnimateRows
@@ -130,13 +158,13 @@ function LinksPanel({ primaryLinks, reveal }: LinksPanelProps) {
               transition={shouldAnimateRows ? { duration: 0.34, delay: reveal ? index * 0.055 : 0, ease: "linear" } : undefined}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.985 }}
-              className="group relative flex min-h-16 items-center gap-3 overflow-hidden bg-white px-2 py-2.5 transition hover:bg-[#FFF8F2]"
+              className="liquid-glass-row group relative flex min-h-16 items-center gap-3 overflow-hidden px-2 py-2.5 transition"
             >
-              <span className="absolute bottom-2 left-0 top-2 w-[3px] origin-center scale-y-50 bg-[#F97300] opacity-0 transition duration-200 group-hover:scale-y-100 group-hover:opacity-100" />
-              <span className="flex size-10 shrink-0 items-center justify-center bg-[#F8F8F8] text-[#F97300] transition duration-200 group-hover:bg-[#F97300] group-hover:text-white">
+              <span className="absolute bottom-2 left-0 top-2 z-20 w-[3px] origin-center scale-y-50 bg-[#F97300] opacity-0 transition duration-200 group-hover:scale-y-100 group-hover:opacity-100" />
+              <span className="liquid-glass-icon relative z-10 flex size-10 shrink-0 items-center justify-center text-[#F97300] transition duration-200 group-hover:bg-[#F97300] group-hover:text-white">
                 <LinkIcon name={link.icon} className="size-5" />
               </span>
-              <span className="min-w-0 flex-1">
+              <span className="relative z-10 min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-black leading-tight">
                   {link.title}
                 </span>
@@ -144,7 +172,7 @@ function LinksPanel({ primaryLinks, reveal }: LinksPanelProps) {
                   {link.description}
                 </span>
               </span>
-              <ArrowRight className="size-4 shrink-0 text-[#A0A0A0] transition group-hover:translate-x-1 group-hover:text-[#F97300]" />
+              <ArrowRight className="relative z-10 size-4 shrink-0 text-[#A0A0A0] transition group-hover:translate-x-1 group-hover:text-[#F97300]" />
             </motion.a>
           ))}
         </div>
@@ -154,17 +182,39 @@ function LinksPanel({ primaryLinks, reveal }: LinksPanelProps) {
 }
 
 export function PublicTapLinkPage() {
+  const { sourceSlug } = useParams();
   const [stage, setStage] = useState<IntroStage>("intro");
   const [linksVisible, setLinksVisible] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const trackingSource = sourceSlug ?? "taplink";
 
   const linksQuery = useQuery({
-    queryKey: ["public-links"],
-    queryFn: api.publicLinks
+    queryKey: ["public-links", sourceSlug ?? "default"],
+    queryFn: () => api.publicLinks(sourceSlug),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
 
-  const links = linksQuery.data?.links ?? defaultLinks;
+  const links = linksQuery.data?.links ?? (sourceSlug ? [] : defaultLinks);
   const primaryLinks = links.filter((link) => link.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+
+  useEffect(() => {
+    if (!sourceSlug) {
+      return;
+    }
+
+    const trackingKey = `${window.location.pathname}:${trackingSource}`;
+
+    if (trackedEntryKeys.has(trackingKey)) {
+      return;
+    }
+
+    trackedEntryKeys.add(trackingKey);
+    void api.trackEntry(trackingSource).catch(() => {
+      trackedEntryKeys.delete(trackingKey);
+    });
+  }, [sourceSlug, trackingSource]);
 
   useEffect(() => {
     if (stage === "links") {
@@ -250,7 +300,7 @@ export function PublicTapLinkPage() {
               style={{ pointerEvents: linksVisible ? "auto" : "none" }}
             >
               <div className="mx-auto w-full max-w-[560px]">
-                <LinksPanel primaryLinks={primaryLinks} reveal={linksVisible} />
+                <LinksPanel primaryLinks={primaryLinks} sourceSlug={trackingSource} reveal={linksVisible} />
               </div>
             </motion.div>
 
@@ -278,7 +328,7 @@ export function PublicTapLinkPage() {
                       style={{
                         width: layer.width,
                         opacity: linksVisible ? layer.overlayEchoOpacity : layer.echoOpacity,
-                        filter: `blur(${linksVisible ? layer.overlayEchoBlur : layer.echoBlur}px)`,
+                        filter: `blur(${linksVisible ? layer.overlayEchoBlur : layer.echoBlur}px) drop-shadow(0 18px 32px rgba(16, 16, 16, 0.1))`,
                         transition: "opacity 240ms linear, filter 240ms linear"
                       }}
                       initial={{
@@ -307,6 +357,7 @@ export function PublicTapLinkPage() {
                       style={{
                         width: layer.width,
                         opacity: linksVisible ? layer.overlayOpacity : layer.opacity,
+                        filter: "drop-shadow(0 22px 36px rgba(16, 16, 16, 0.14))",
                         transition: "opacity 240ms linear"
                       }}
                       initial={{
@@ -334,7 +385,7 @@ export function PublicTapLinkPage() {
             </div>
           </motion.section>
         ) : (
-          <LinksPanel primaryLinks={primaryLinks} />
+          <LinksPanel primaryLinks={primaryLinks} sourceSlug={trackingSource} />
         )}
       </main>
     </div>

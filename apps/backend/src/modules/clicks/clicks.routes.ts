@@ -1,9 +1,54 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { clickQuerySchema } from "@gradusy24/shared";
 import { authenticate } from "../../middlewares/authenticate.js";
+import { allowedOrigins, env } from "../../utils/env.js";
 
 function firstHeader(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function frontendOrigin() {
+  return env.FRONTEND_ORIGIN.split(",")[0]?.trim().replace(/\/$/, "") || "http://localhost:5173";
+}
+
+function allowedFrontendOrigin(origin: string | undefined) {
+  const normalizedOrigin = origin?.trim().replace(/\/$/, "");
+  return normalizedOrigin && allowedOrigins.map((allowedOrigin) => allowedOrigin.replace(/\/$/, "")).includes(normalizedOrigin)
+    ? normalizedOrigin
+    : null;
+}
+
+function requestFrontendOrigin(request: FastifyRequest) {
+  const origin = allowedFrontendOrigin(firstHeader(request.headers.origin));
+
+  if (origin) {
+    return origin;
+  }
+
+  const referer = firstHeader(request.headers.referer);
+
+  if (!referer) {
+    return null;
+  }
+
+  try {
+    return allowedFrontendOrigin(new URL(referer).origin);
+  } catch {
+    return null;
+  }
+}
+
+function frontendHref(href: string, origin = frontendOrigin()) {
+  try {
+    return new URL(href).toString();
+  } catch {
+    const path = href.startsWith("/") ? href : `/${href}`;
+    return `${origin}${path}`;
+  }
+}
+
+function linkDestination(link: { href: string; target: "frontend" | "direct" }, origin?: string | null) {
+  return link.target === "frontend" ? frontendHref(link.href, origin ?? frontendOrigin()) : link.href;
 }
 
 async function trackClick(app: Parameters<FastifyPluginAsync>[0], request: FastifyRequest, slug: string) {
@@ -46,7 +91,7 @@ export const clicksRoutes: FastifyPluginAsync = async (app) => {
       return;
     }
 
-    reply.redirect(link.href);
+    reply.redirect(linkDestination(link));
   });
 
   app.post("/clicks/:slug", async (request, reply) => {
@@ -58,7 +103,7 @@ export const clicksRoutes: FastifyPluginAsync = async (app) => {
       return;
     }
 
-    return { href: link.href };
+    return { href: linkDestination(link, requestFrontendOrigin(request)), target: link.target };
   });
 
   app.get("/clicks", { preHandler: authenticate }, async (request) => {

@@ -1,7 +1,17 @@
-import type { LinkInput, LinkUpdate, LoginInput, SiteSettings } from "@gradusy24/shared";
-import type { ApiLink, ApiUser, DashboardResponse, SettingsResponse } from "@/types/api";
+import type { EntryLinkInput, EntryLinkUpdate, LinkInput, LinkUpdate, LoginInput, SiteSettings } from "@gradusy24/shared";
+import type {
+  ApiEntryLink,
+  ApiLink,
+  ApiUser,
+  DashboardResponse,
+  SettingsResponse,
+  SourceAnalyticsResponse
+} from "@/types/api";
 
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+export const FRONTEND_URL = (
+  import.meta.env.VITE_FRONTEND_URL ?? (typeof window === "undefined" ? "" : window.location.origin)
+).replace(/\/$/, "");
 
 type RequestOptions = RequestInit & {
   skipRefresh?: boolean;
@@ -31,7 +41,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...options.headers
     },
     ...options
@@ -54,7 +64,25 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
 export const api = {
   publicSettings: () => apiRequest<SettingsResponse>("/public/settings", { skipRefresh: true }),
-  publicLinks: () => apiRequest<{ links: ApiLink[] }>("/public/links", { skipRefresh: true }),
+  publicLinks: (source?: string) =>
+    apiRequest<{ links: ApiLink[] }>(
+      `/public/links${source ? `?source=${encodeURIComponent(source)}` : ""}`,
+      { skipRefresh: true }
+    ),
+  publicEntryLinks: () => apiRequest<{ entryLinks: ApiEntryLink[] }>("/public/entry-links", { skipRefresh: true }),
+  trackEntry: (slug: string) =>
+    apiRequest<{ ok: boolean }>(`/entry-visits/${encodeURIComponent(slug)}`, {
+      method: "POST",
+      skipRefresh: true
+    }),
+  trackClick: (slug: string, source = "taplink") =>
+    apiRequest<{ href: string; target: "frontend" | "direct" }>(
+      `/clicks/${slug}?source=${encodeURIComponent(source)}`,
+      {
+        method: "POST",
+        skipRefresh: true
+      }
+    ),
   login: (body: LoginInput) =>
     apiRequest<{ user: ApiUser }>("/auth/login", {
       method: "POST",
@@ -64,10 +92,23 @@ export const api = {
   me: () => apiRequest<{ user: ApiUser }>("/auth/me"),
   logout: () => apiRequest<{ ok: boolean }>("/auth/logout", { method: "POST", skipRefresh: true }),
   dashboard: () => apiRequest<DashboardResponse>("/dashboard"),
+  sourceAnalytics: (slug: string) =>
+    apiRequest<SourceAnalyticsResponse>(`/entry-analytics/${encodeURIComponent(slug)}`),
   links: () => apiRequest<{ links: ApiLink[] }>("/links"),
+  entryLinks: () => apiRequest<{ entryLinks: ApiEntryLink[] }>("/entry-links"),
   createLink: (body: LinkInput) =>
     apiRequest<{ link: ApiLink }>("/links", {
       method: "POST",
+      body: JSON.stringify(body)
+    }),
+  createEntryLink: (body: EntryLinkInput) =>
+    apiRequest<{ entryLink: ApiEntryLink }>("/entry-links", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+  updateEntryLink: (id: string, body: EntryLinkUpdate) =>
+    apiRequest<{ entryLink: ApiEntryLink }>(`/entry-links/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(body)
     }),
   updateLink: (id: string, body: LinkUpdate) =>
@@ -76,6 +117,7 @@ export const api = {
       body: JSON.stringify(body)
     }),
   deleteLink: (id: string) => apiRequest<{ ok: boolean }>(`/links/${id}`, { method: "DELETE" }),
+  deleteEntryLink: (id: string) => apiRequest<{ ok: boolean }>(`/entry-links/${id}`, { method: "DELETE" }),
   settings: () => apiRequest<SettingsResponse>("/settings"),
   updateSettings: (body: Partial<SiteSettings>) =>
     apiRequest<SettingsResponse>("/settings", {
@@ -84,6 +126,20 @@ export const api = {
     })
 };
 
-export function trackingUrl(slug: string, source = "taplink") {
-  return `${API_URL}/clicks/${slug}?source=${encodeURIComponent(source)}`;
+export function trackingUrl(slug: string, source?: string) {
+  const path = `/go/${slug}${source ? `?source=${encodeURIComponent(source)}` : ""}`;
+  return FRONTEND_URL ? `${FRONTEND_URL}${path}` : path;
+}
+
+export function linkDestination(link: Pick<ApiLink, "href" | "target">) {
+  if (link.target === "direct") {
+    return link.href;
+  }
+
+  try {
+    return new URL(link.href).toString();
+  } catch {
+    const path = link.href.startsWith("/") ? link.href : `/${link.href}`;
+    return FRONTEND_URL ? `${FRONTEND_URL}${path}` : path;
+  }
 }
