@@ -8,7 +8,23 @@ import type {
   SourceAnalyticsResponse
 } from "@/types/api";
 
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+function resolveApiUrl() {
+  const configuredUrl = import.meta.env.VITE_API_URL;
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  if (typeof window === "undefined") {
+    return "/api";
+  }
+
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+  return isLocalhost ? "http://localhost:4000/api" : "/api";
+}
+
+export const API_URL = resolveApiUrl();
 export const FRONTEND_URL = (
   import.meta.env.VITE_FRONTEND_URL ?? (typeof window === "undefined" ? "" : window.location.origin)
 ).replace(/\/$/, "");

@@ -95,9 +95,11 @@ type LinksPanelProps = {
   primaryLinks: ApiLink[];
   sourceSlug: string;
   reveal?: boolean;
+  isLoading?: boolean;
+  isError?: boolean;
 };
 
-function LinksPanel({ primaryLinks, sourceSlug, reveal }: LinksPanelProps) {
+function LinksPanel({ primaryLinks, sourceSlug, reveal, isLoading, isError }: LinksPanelProps) {
   const shouldAnimateRows = typeof reveal === "boolean";
   const shouldReduceMotion = useReducedMotion();
 
@@ -140,6 +142,33 @@ function LinksPanel({ primaryLinks, sourceSlug, reveal }: LinksPanelProps) {
         </div>
 
         <div className="grid gap-1">
+          {isLoading && primaryLinks.length === 0 ? (
+            Array.from({ length: 5 }, (_, index) => (
+              <div
+                key={index}
+                className="liquid-glass-row relative flex min-h-16 animate-pulse items-center gap-3 overflow-hidden px-2 py-2.5"
+              >
+                <span className="relative z-10 size-10 shrink-0 bg-[#F97300]/10" />
+                <span className="relative z-10 grid min-w-0 flex-1 gap-2">
+                  <span className="h-4 w-2/3 bg-[#101010]/10" />
+                  <span className="h-3 w-4/5 bg-[#101010]/5" />
+                </span>
+              </div>
+            ))
+          ) : null}
+
+          {isError && primaryLinks.length === 0 ? (
+            <div className="liquid-glass-row relative flex min-h-16 items-center px-2 py-2.5 text-[14px] font-semibold text-[#696969]">
+              Не удалось загрузить действия
+            </div>
+          ) : null}
+
+          {!isLoading && !isError && primaryLinks.length === 0 ? (
+            <div className="liquid-glass-row relative flex min-h-16 items-center px-2 py-2.5 text-[14px] font-semibold text-[#696969]">
+              Действия пока не настроены
+            </div>
+          ) : null}
+
           {primaryLinks.map((link, index) => (
             <motion.a
               key={link.id}
@@ -300,7 +329,13 @@ export function PublicTapLinkPage() {
               style={{ pointerEvents: linksVisible ? "auto" : "none" }}
             >
               <div className="mx-auto w-full max-w-[560px]">
-                <LinksPanel primaryLinks={primaryLinks} sourceSlug={trackingSource} reveal={linksVisible} />
+                <LinksPanel
+                  primaryLinks={primaryLinks}
+                  sourceSlug={trackingSource}
+                  reveal={linksVisible}
+                  isLoading={linksQuery.isLoading}
+                  isError={linksQuery.isError}
+                />
               </div>
             </motion.div>
 
@@ -385,7 +420,12 @@ export function PublicTapLinkPage() {
             </div>
           </motion.section>
         ) : (
-          <LinksPanel primaryLinks={primaryLinks} sourceSlug={trackingSource} />
+          <LinksPanel
+            primaryLinks={primaryLinks}
+            sourceSlug={trackingSource}
+            isLoading={linksQuery.isLoading}
+            isError={linksQuery.isError}
+          />
         )}
       </main>
     </div>
