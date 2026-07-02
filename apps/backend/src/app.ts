@@ -3,8 +3,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -74,7 +73,7 @@ async function registerFrontendRoutes(app: FastifyInstance) {
       return;
     }
 
-    reply.type(contentType).send(createReadStream(filePath));
+    reply.type(contentType).send(await readFile(filePath));
   });
 }
 
